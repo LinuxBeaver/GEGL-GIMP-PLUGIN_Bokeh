@@ -2,7 +2,7 @@ GEGL bokeh
 =========
 
 GEGL bokeh
-
+(Filter now has a blur option that isn't shown in preview)
 ![image preview](preview.png)
 
 
