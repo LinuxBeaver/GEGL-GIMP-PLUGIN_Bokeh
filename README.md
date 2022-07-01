@@ -3,7 +3,7 @@ GEGL bokeh
 
 GEGL bokeh
 
-![image preview](preview1.png)
+![image preview](preview.png)
 
 
 ## Compiling and Installing
