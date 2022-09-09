@@ -72,10 +72,10 @@ property_color (pink, _("Color"), "#ff23cf")
     description(_("The color to make transparent."))
     ui_meta     ("role", "output-extent")
 
-property_double (opacity, _("Opacity Increasement"), 0.6)
+property_double (opacity, _("Opacity Increase/Decrease (use if native opacity bar doesn't work)"), 0.6)
     description (_("Global opacity value that is always used on top of the optional auxiliary input buffer."))
-    value_range (0.3, 1.3)
-    ui_range    (0.3, 1.3)
+    value_range (0.1, 1.3)
+    ui_range    (0.1, 1.3)
 
 property_double (transparency, _("Transparency threshold"), 0.5)
     description(_("The limit below which colors become transparent."))
@@ -101,7 +101,7 @@ property_int (lens, _("Blur"), 2)
 static void attach (GeglOperation *operation)
 {
   GeglNode *gegl = operation->node;
-  GeglNode *input, *output, *c2a, *color, *opacity, *median, *divide, *mcol, *blur, *noise;
+  GeglNode *input, *output, *c2a, *color, *opacity, *median, *divide,  *mcol, *coloroverlay, *blur, *noise;
 
   input    = gegl_node_get_input_proxy (gegl, "input");
   output   = gegl_node_get_output_proxy (gegl, "output");
@@ -124,7 +124,11 @@ divide = gegl_node_new_child (gegl,
                                   "operation", "gegl:divide",
                                   NULL);
 mcol = gegl_node_new_child (gegl,
-                                  "operation", "gegl:mcol",
+                                  "operation", "gegl:multiply",
+                                  NULL);
+
+coloroverlay = gegl_node_new_child (gegl,
+                                  "operation", "gegl:color-overlay",
                                   NULL);
 noise = gegl_node_new_child (gegl,
                                   "operation", "gegl:cell-noise",
@@ -139,6 +143,8 @@ blur = gegl_node_new_child (gegl,
 
   gegl_node_link_many (input, color, divide, median, c2a, mcol, opacity, blur, output, NULL);
 gegl_node_link_many (input, noise, NULL);
+gegl_node_link_many (input, coloroverlay, NULL);
+  gegl_node_connect_from (mcol, "aux", coloroverlay, "output");
   gegl_node_connect_from (divide, "aux", noise, "output");
 
 
@@ -154,7 +160,7 @@ gegl_node_link_many (input, noise, NULL);
     gegl_operation_meta_redirect (operation, "median", median, "radius");
     gegl_operation_meta_redirect (operation, "percentile", median, "percentile");
     gegl_operation_meta_redirect (operation, "hvalue", color, "value");
-    gegl_operation_meta_redirect (operation, "mcol", mcol, "value");
+    gegl_operation_meta_redirect (operation, "mcol", coloroverlay, "value");
     gegl_operation_meta_redirect (operation, "neighborhood", median, "neighborhood");
     gegl_operation_meta_redirect (operation, "scale", noise, "scale");
     gegl_operation_meta_redirect (operation, "shape", noise, "shape");
