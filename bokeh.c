@@ -17,11 +17,29 @@
  * 2022 Beaver, GEGL Bokeh 
  */
 
+/*
+
+Recreation of Bokeh's GEGL Graph --june 24 2023 -- this may not be 100% the same
+but it is close enough. If you put this in Gimp's GEGL Graph you can test 
+Bokeh without installing it
+
+color value=#ff23cf 
+id=1 divide aux=[ ref=1 cell-noise scale=0.12 shape=3 seed=33   ]
+median-blur radius=25 percentile=100 neighborhood=circle
+color-to-alpha color=#f553ff transparency-threshold=0.3
+id=2 multiply aux=[ ref=2 color-overlay value=#ff1300 ]
+gaussian-blur std-dev-x=0 std-dev-y=0
+median-blur radius=0
+ */
+
 #include "config.h"
 #include <glib/gi18n-lib.h>
 
 #ifdef GEGL_PROPERTIES
 
+
+/*Silly words like neighborhoodo are here so it does not conflict with Median Blur's ENUM list - that is why I added the o's
+NO TWO FILTERS CAN SHARE THE SAME ENUM LIST*/
 enum_start (gegl_median_blur_neighborhoodo)
   enum_value (GEGL_MEDIAN_BLUR_NEIGHBORHOOD_SQUAREo,  "square",  N_("Square"))
   enum_value (GEGL_MEDIAN_BLUR_NEIGHBORHOOD_CIRCLEo,  "circle",  N_("Circle"))
@@ -34,12 +52,10 @@ property_enum (neighborhood, _("Shape"),
                GEGL_MEDIAN_BLUR_NEIGHBORHOOD_CIRCLEo)
   description (_("Neighborhood type"))
 
-
 property_color  (mcol, _("Color of the Bokeh"), "#ffffff")
 
-
 property_double  (scale, _("Amount of Bokeh shapes"), 0.12)
-    description  (_("The scale of the noise function"))
+    description  (_("The scale of the noise function that increases the amount of shapes"))
     value_range  (0.050, 0.35)
 
 property_double  (shape, _("Clarity of Background Bokehs"), 3.0)
@@ -49,38 +65,16 @@ property_double  (shape, _("Clarity of Background Bokehs"), 3.0)
 property_seed    (seed, _("Random seed"), rand)
     description  (_("The random seed for the noise function"))
 
-
-property_color (hvalue, _("Color"), "#ff23cf")
-    /* TRANSLATORS: the string 'black' should not be translated */
-    ui_meta     ("role", "output-extent")
-
-
 property_int  (median, _("Internal Median to increase Bokeh Size"), 25)
   value_range (1, 80)
   ui_range    (1, 80)
   ui_meta     ("unit", "pixel-distance")
-  description (_("Neighborhood radius, a negative value will calculate with inverted percentiles"))
+  description (_("Median Blur Radius to increase the size of the bokeh. Neighborhood radius, a negative value will calculate with inverted percentiles"))
 
-property_double  (percentile, _("Internal Median Blur Percentile"), 100)
-  value_range (31, 100)
-  description (_("Neighborhood color percentile"))
-    ui_meta     ("role", "output-extent")
-
-
-
-property_color (pink, _("Color"), "#ff23cf")
-    description(_("The color to make transparent."))
-    ui_meta     ("role", "output-extent")
-
-property_double (opacity, _("Opacity Increase/Decrease (use if native opacity bar doesn't work)"), 0.6)
+property_double (opacity, _("Opacity Increase/Decrease"), 0.6)
     description (_("Global opacity value that is always used on top of the optional auxiliary input buffer."))
     value_range (0.1, 1.3)
     ui_range    (0.1, 1.3)
-
-property_double (transparency, _("Transparency threshold"), 0.5)
-    description(_("The limit below which colors become transparent."))
-    value_range (0.5, 0.6)
-    ui_meta     ("role", "output-extent")
 
 property_int (lens, _("Blur"), 2)
    description(_("Blurring tiny Bokehs will make it snow"))
@@ -101,7 +95,10 @@ property_int (lens, _("Blur"), 2)
 static void attach (GeglOperation *operation)
 {
   GeglNode *gegl = operation->node;
-  GeglNode *input, *output, *c2a, *color, *opacity, *median, *divide,  *mcol, *coloroverlay, *blur, *noise;
+  GeglNode *input, *output, *c2a, *color, *opacity, *median, *divide, *repairgeglgraph,  *mcol, *coloroverlay, *blur, *noise;
+  GeglColor *hiddencolorbokeh = gegl_color_new ("#ff23cf");
+  GeglColor *hiddencolorbokeh2 = gegl_color_new ("#ff23cf");
+
 
   input    = gegl_node_get_input_proxy (gegl, "input");
   output   = gegl_node_get_output_proxy (gegl, "output");
@@ -109,16 +106,16 @@ static void attach (GeglOperation *operation)
 
  
   c2a = gegl_node_new_child (gegl,
-                                  "operation", "gegl:color-to-alpha",
-                                  NULL);
+                                  "operation", "gegl:color-to-alpha", "transparency-threshold", 0.5, "color", hiddencolorbokeh2, NULL);
+                               
 color = gegl_node_new_child (gegl,
-                                  "operation", "gegl:color",
-                                  NULL);
+                                  "operation", "gegl:color", "value", hiddencolorbokeh, NULL);
+                               
 opacity = gegl_node_new_child (gegl,
                                   "operation", "gegl:opacity",
                                   NULL);
 median = gegl_node_new_child (gegl,
-                                  "operation", "gegl:median-blur",
+                                  "operation", "gegl:median-blur", "percentile", 100.0,
                                   NULL);
 divide = gegl_node_new_child (gegl,
                                   "operation", "gegl:divide",
@@ -139,27 +136,27 @@ blur = gegl_node_new_child (gegl,
                                   NULL);
 
 
+  repairgeglgraph      = gegl_node_new_child (gegl, "operation", "gegl:median-blur",
+                                         "radius",       0,
+                                         NULL);
+
+ /*Repair GEGL Graph is a critical operation for Gimp's non-destructive future.
+A median blur at zero radius is confirmed to make no changes to an image. 
+This option resets gegl:opacity's value to prevent a known bug where
+plugins like clay, glossy balloon and custom bevel glitch out when
+drop shadow is applied in a gegl graph below them.*/
+ 
 
 
-  gegl_node_link_many (input, color, divide, median, c2a, mcol, opacity, blur, output, NULL);
-gegl_node_link_many (input, noise, NULL);
-gegl_node_link_many (input, coloroverlay, NULL);
+  gegl_node_link_many (input, color, divide, median, c2a, mcol, opacity, blur, repairgeglgraph, output, NULL);
+  gegl_node_link_many (input, noise, NULL);
+  gegl_node_link_many (input, coloroverlay, NULL);
   gegl_node_connect_from (mcol, "aux", coloroverlay, "output");
   gegl_node_connect_from (divide, "aux", noise, "output");
 
-
-
-
-
-
-
     gegl_operation_meta_redirect (operation, "value", color, "value");
-    gegl_operation_meta_redirect (operation, "transparency", c2a, "transparency-threshold");
-    gegl_operation_meta_redirect (operation, "pink", c2a, "color");
     gegl_operation_meta_redirect (operation, "opacity", opacity, "value");
     gegl_operation_meta_redirect (operation, "median", median, "radius");
-    gegl_operation_meta_redirect (operation, "percentile", median, "percentile");
-    gegl_operation_meta_redirect (operation, "hvalue", color, "value");
     gegl_operation_meta_redirect (operation, "mcol", coloroverlay, "value");
     gegl_operation_meta_redirect (operation, "neighborhood", median, "neighborhood");
     gegl_operation_meta_redirect (operation, "scale", noise, "scale");
