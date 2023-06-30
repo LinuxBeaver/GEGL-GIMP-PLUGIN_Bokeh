@@ -1,5 +1,6 @@
 GEGL bokeh
 =========
+Make a pseudo bokeh effect in Gimp using this plugin.
 
 GEGL bokeh
 (Filter now has a blur option that isn't shown in preview)
@@ -59,5 +60,9 @@ meson setup --buildtype=release build
 ninja -C build
 ```
 
+## More Previews of this based Gimp Plugin
 
+![image preview](preview2.png)
+
+![image preview](preview3_bokeh.png)
 
