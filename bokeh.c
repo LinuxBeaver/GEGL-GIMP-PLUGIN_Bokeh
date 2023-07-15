@@ -30,12 +30,18 @@ color-to-alpha color=#f553ff transparency-threshold=0.3
 id=2 multiply aux=[ ref=2 color-overlay value=#ff1300 ]
 gaussian-blur std-dev-x=0 std-dev-y=0
 median-blur radius=0
+
+This Plugin shows two different ways to embed a color. GEGL Graph and GEGL color embedding.
  */
 
 #include "config.h"
 #include <glib/gi18n-lib.h>
 
 #ifdef GEGL_PROPERTIES
+
+
+#define embeddedcolor \
+" gegl:color value=#ff23cf "\
 
 
 /*Silly words like neighborhoodo are here so it does not conflict with Median Blur's ENUM list - that is why I added the o's
@@ -95,21 +101,25 @@ property_int (lens, _("Blur"), 2)
 static void attach (GeglOperation *operation)
 {
   GeglNode *gegl = operation->node;
-  GeglNode *input, *output, *c2a, *color, *opacity, *median, *divide, *repairgeglgraph,  *mcol, *coloroverlay, *blur, *noise;
-  GeglColor *hiddencolorbokeh = gegl_color_new ("#ff23cf");
-  GeglColor *hiddencolorbokeh2 = gegl_color_new ("#ff23cf");
+  GeglNode *input, *output, *c2a, *color, *opacity, *median, *divide, *idref, *repairgeglgraph,  *mcol, *coloroverlay, *blur, *noise;
+
+  GeglColor *embeddedcolorbokehtwo = gegl_color_new ("#ff23cf");
+
 
 
   input    = gegl_node_get_input_proxy (gegl, "input");
   output   = gegl_node_get_output_proxy (gegl, "output");
 
-
- 
-  c2a = gegl_node_new_child (gegl,
-                                  "operation", "gegl:color-to-alpha", "transparency-threshold", 0.5, "color", hiddencolorbokeh2, NULL);
+c2a = gegl_node_new_child (gegl,
+                                "operation", "gegl:color-to-alpha", "transparency-threshold", 0.5, "color", embeddedcolorbokehtwo, NULL);
                                
-color = gegl_node_new_child (gegl,
-                                  "operation", "gegl:color", "value", hiddencolorbokeh, NULL);
+  color    = gegl_node_new_child (gegl,
+                                  "operation", "gegl:gegl", "string", embeddedcolor,
+                                  NULL);
+
+idref = gegl_node_new_child (gegl,
+                                  "operation", "gegl:nop",
+                                  NULL);
                                
 opacity = gegl_node_new_child (gegl,
                                   "operation", "gegl:opacity",
@@ -146,15 +156,11 @@ This option resets gegl:opacity's value to prevent a known bug where
 plugins like clay, glossy balloon and custom bevel glitch out when
 drop shadow is applied in a gegl graph below them.*/
  
-
-
-  gegl_node_link_many (input, color, divide, median, c2a, mcol, opacity, blur, repairgeglgraph, output, NULL);
-  gegl_node_link_many (input, noise, NULL);
-  gegl_node_link_many (input, coloroverlay, NULL);
+  gegl_node_link_many (input, color, divide, median, c2a, idref, mcol, opacity, blur, repairgeglgraph, output, NULL);
+  gegl_node_link_many (idref, coloroverlay, NULL);
   gegl_node_connect_from (mcol, "aux", coloroverlay, "output");
   gegl_node_connect_from (divide, "aux", noise, "output");
 
-    gegl_operation_meta_redirect (operation, "value", color, "value");
     gegl_operation_meta_redirect (operation, "opacity", opacity, "value");
     gegl_operation_meta_redirect (operation, "median", median, "radius");
     gegl_operation_meta_redirect (operation, "mcol", coloroverlay, "value");
@@ -177,7 +183,7 @@ gegl_op_class_init (GeglOpClass *klass)
 
   gegl_operation_class_set_keys (operation_class,
     "name",        "gegl:bokeh",
-    "title",       _("Bokeh Effect -Requires Alpha Channel "),
+    "title",       _("Bokeh Effect -Requires Alpha Channel"),
     "categories",  "Generic",
     "reference-hash", "1a1210akk00k101x2001b2hc",
     "description", _("Create a fake bokeh effect using GEGL. For edits directly on top of the image without layers use the normal or other blending options (like overlay or softlight). If the image is glitching it is because your layer has no alpha channel. "
