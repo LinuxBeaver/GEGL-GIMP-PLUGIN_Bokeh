@@ -188,6 +188,8 @@ gegl_op_class_init (GeglOpClass *klass)
     "reference-hash", "1a1210akk00k101x2001b2hc",
     "description", _("Create a fake bokeh effect using GEGL. For edits directly on top of the image without layers use the normal or other blending options (like overlay or softlight). If the image is glitching it is because your layer has no alpha channel. "
                      ""),
+    "gimp:menu-path", "<Image>/Filters/Render/Fun",
+    "gimp:menu-label", _("Bokeh..."),
     NULL);
 }
 
