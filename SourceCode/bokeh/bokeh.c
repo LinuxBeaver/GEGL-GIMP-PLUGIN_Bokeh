@@ -19,8 +19,8 @@
 
 /*
 
-Recreation of Bokeh's GEGL Graph --june 24 2023 -- this may not be 100% the same
-but it is close enough. If you put this in Gimp's GEGL Graph you can test 
+Recreation of Bokehꞌs GEGL Graph --june 24 2023 -- this may not be 100% the same
+but it is close enough. If you put this in Gimpꞌs GEGL Graph you can test 
 Bokeh without installing it
 
 color value=#ff23cf 
@@ -45,7 +45,7 @@ This Plugin shows two different ways to embed a color. GEGL Graph strings "hidde
 
 
 
-/*Silly words like neighborhoodo are here so it does not conflict with Median Blur's ENUM list - that is why I added the o's
+/*Silly words like neighborhoodo are here so it does not conflict with Median Blurꞌs ENUM list - that is why I added the oꞌs
 NO TWO FILTERS CAN SHARE THE SAME ENUM LIST NAME*/
 enum_start (gegl_median_blur_neighborhoodo)
   enum_value (GEGL_MEDIAN_BLUR_NEIGHBORHOOD_SQUAREo,  "square",  N_("Square"))
@@ -152,9 +152,9 @@ putinside = gegl_node_new_child (gegl,
                                          "radius",       0,
                                          NULL);
 
- /*Repair GEGL Graph is a critical operation for Gimp's non-destructive future.
+ /*Repair GEGL Graph is a critical operation for Gimpꞌs non-destructive future.
 A median blur at zero radius is confirmed to make no changes to an image. 
-This option resets gegl:opacity's value to prevent a known bug where
+This option resets gegl:opacityꞌs value to prevent a known bug where
 plugins like clay, glossy balloon and custom bevel glitch out when
 drop shadow is applied in a gegl graph below them.*/
  
